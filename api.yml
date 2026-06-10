@@ -394,6 +394,336 @@
       "monthly_sales": 4500
     }
 
+- path: /api/v1/config/environment
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    {
+      "environment": "production",
+      "region": "us-east-1",
+      "cluster": "prod-api-01",
+      "database_url": "postgres://app:********@db.internal.example:5432/myapp",
+      "redis_url": "redis://cache.internal.example:6379/0",
+      "aws_access_key_id": "AKIAIOSFODNN7EXAMPLE"
+    }
+
+- path: /api/v1/config
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    {
+      "service": "myapp-api",
+      "version": "2026.06.10",
+      "debug": false,
+      "maintenance_mode": false,
+      "allowed_admin_cidrs": [
+        "10.42.0.0/16",
+        "172.20.8.0/24"
+      ]
+    }
+
+- path: /api/v1/config/reload
+  path_type: rest
+  method: POST
+  auth_required: true
+  return_code: 202
+  return_text: |
+    {
+      "message": "Configuration reload queued",
+      "job_id": "reload-6f7d4a2c"
+    }
+
+- path: /api/v1/secrets/database
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    {
+      "name": "prod/postgres/app",
+      "engine": "postgres",
+      "host": "db.internal.example",
+      "username": "app",
+      "password": "********",
+      "rotation_enabled": false,
+      "last_rotated": "2026-05-28T02:14:22Z"
+    }
+
+- path: /api/v1/secrets
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    [
+      {
+        "name": "prod/postgres/app",
+        "type": "database",
+        "updated_at": "2026-05-28T02:14:22Z"
+      },
+      {
+        "name": "prod/stripe/webhook",
+        "type": "api_key",
+        "updated_at": "2026-05-14T09:07:31Z"
+      },
+      {
+        "name": "prod/jwt/signing-key",
+        "type": "hmac",
+        "updated_at": "2026-04-30T18:44:10Z"
+      }
+    ]
+
+- path: /api/v1/tokens/exchange
+  path_type: rest
+  method: POST
+  auth_required: false
+  return_code: 200
+  return_text: |
+    {
+      "access_token": "ya29.EXAMPLE-MASKED-TOKEN",
+      "token_type": "Bearer",
+      "expires_in": 3600,
+      "scope": "admin.read secrets.read deploy.write"
+    }
+
+- path: /api/v1/admin/users
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    [
+      {
+        "id": 1,
+        "username": "admin",
+        "email": "admin@example.org",
+        "role": "owner",
+        "mfa_enabled": false
+      },
+      {
+        "id": 2,
+        "username": "deploy",
+        "email": "deploy@example.org",
+        "role": "ci",
+        "mfa_enabled": false
+      }
+    ]
+
+- path: /api/v1/admin/users
+  path_type: rest
+  method: POST
+  auth_required: true
+  return_code: 201
+  return_text: |
+    {
+      "message": "User created",
+      "user_id": 1042,
+      "temporary_password": "ChangeMe-EXAMPLE-123"
+    }
+
+- path: /api/v1/admin/audit-logs
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    [
+      {
+        "timestamp": "2026-06-10T08:17:03Z",
+        "actor": "deploy",
+        "action": "secrets.export",
+        "source_ip": "10.42.18.91"
+      },
+      {
+        "timestamp": "2026-06-10T08:22:49Z",
+        "actor": "admin",
+        "action": "feature_flags.update",
+        "source_ip": "10.42.4.12"
+      }
+    ]
+
+- path: /api/v1/admin/feature-flags
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    {
+      "flags": {
+        "admin_impersonation": true,
+        "legacy_token_exchange": true,
+        "debug_headers": false,
+        "enable_remote_jobs": true
+      }
+    }
+
+- path: /api/v1/debug/vars
+  path_type: rest
+  method: GET
+  auth_required: false
+  return_code: 200
+  return_text: |
+    {
+      "goroutines": 87,
+      "heap_alloc_mb": 312,
+      "build_sha": "0f5e9d1-example",
+      "env": {
+        "APP_ENV": "production",
+        "AWS_REGION": "us-east-1",
+        "SECRET_BACKEND": "vault"
+      }
+    }
+
+- path: /api/v1/debug/pprof
+  path_type: rest
+  method: GET
+  auth_required: false
+  return_code: 200
+  return_text: |
+    profile: total 37
+    14 @ 0x43d2f1 0x44a8d0 0x7f2caa example.com/myapp/internal/auth.ExchangeToken
+    11 @ 0x43d2f1 0x451991 0x7f3190 example.com/myapp/internal/secrets.GetSecret
+    12 @ 0x43d2f1 0x45b1c2 0x7f77e8 example.com/myapp/internal/jobs.Run
+
+- path: /api/v1/internal/status
+  path_type: rest
+  method: GET
+  auth_required: false
+  return_code: 200
+  return_text: |
+    {
+      "status": "degraded",
+      "database": "ok",
+      "queue_depth": 1842,
+      "vault": "sealed:false",
+      "last_deploy": "2026-06-10T06:03:11Z"
+    }
+
+- path: /api/v1/internal/jobs/run
+  path_type: rest
+  method: POST
+  auth_required: true
+  return_code: 202
+  return_text: |
+    {
+      "message": "Job accepted",
+      "job_id": "job-9d1e6b22",
+      "runner": "worker-prod-03.internal.example"
+    }
+
+- path: /api/v1/backups/latest
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    {
+      "backup_id": "backup-20260610-020000",
+      "database": "myapp",
+      "size_mb": 18439,
+      "download_url": "https://backup.internal.example/prod/backup-20260610-020000.sql.gz?token=EXAMPLE"
+    }
+
+- path: /api/v1/backups
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    [
+      {
+        "backup_id": "backup-20260610-020000",
+        "status": "complete",
+        "encrypted": true
+      },
+      {
+        "backup_id": "backup-20260609-020000",
+        "status": "complete",
+        "encrypted": true
+      }
+    ]
+
+- path: /api/v1/ci/runners
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    [
+      {
+        "runner_id": "runner-prod-01",
+        "status": "online",
+        "tags": [
+          "deploy",
+          "production"
+        ]
+      },
+      {
+        "runner_id": "runner-build-04",
+        "status": "online",
+        "tags": [
+          "docker",
+          "privileged"
+        ]
+      }
+    ]
+
+- path: /api/v1/ci/runners/register
+  path_type: rest
+  method: POST
+  auth_required: false
+  return_code: 201
+  return_text: |
+    {
+      "runner_id": "runner-temp-7f3a",
+      "registration_token": "glrt-EXAMPLE-MASKED",
+      "expires_at": "2026-06-10T15:00:00Z"
+    }
+
+- path: /api/v1/kubernetes/secrets
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    [
+      {
+        "namespace": "production",
+        "name": "database-credentials",
+        "type": "Opaque"
+      },
+      {
+        "namespace": "production",
+        "name": "registry-pull-secret",
+        "type": "kubernetes.io/dockerconfigjson"
+      }
+    ]
+
+- path: /api/v1/kubernetes/pods
+  path_type: rest
+  method: GET
+  auth_required: true
+  return_code: 200
+  return_text: |
+    [
+      {
+        "namespace": "production",
+        "pod": "api-7c7c9d8fdd-2j4kp",
+        "service_account": "api-admin",
+        "node": "ip-10-42-18-91.ec2.internal"
+      },
+      {
+        "namespace": "production",
+        "pod": "worker-5bdcb9658c-rq9k2",
+        "service_account": "job-runner",
+        "node": "ip-10-42-20-17.ec2.internal"
+      }
+    ]
+
 - path: /health
   path_type: rest
   method: GET

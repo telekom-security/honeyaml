@@ -128,15 +128,9 @@ async fn run(args: Args, listen: bool, require_logging: bool) -> Result<()> {
             };
 
             app.route(&v, r)
-                .route("/{tail:.*}", web::get().to(handler::handler))
-                .route("/{tail:.*}", web::post().to(handler::handler))
-                .route("/{tail:.*}", web::put().to(handler::handler))
-                .route("/{tail:.*}", web::delete().to(handler::handler))
+                .route("/{tail:.*}", web::route().to(handler::handler))
         } else {
-            app.route("/{tail:.*}", web::get().to(handler::handler))
-                .route("/{tail:.*}", web::post().to(handler::handler))
-                .route("/{tail:.*}", web::put().to(handler::handler))
-                .route("/{tail:.*}", web::delete().to(handler::handler))
+            app.route("/{tail:.*}", web::route().to(handler::handler))
         }
     });
     let server = server.workers(args.workers.into()).bind(("0.0.0.0", args.port))?.run();

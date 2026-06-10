@@ -51,7 +51,11 @@ pub struct WebPath {
 
 impl WebPath {
     pub fn is_match(&self, method: String, path_type: PathType, path: &str) -> bool {
-        let s = "^".to_string() + &self.path + ".*";
+        let s = if self.path == "/" {
+            "^/.*".to_string()
+        } else {
+            format!(r"^{}(?:$|/|\?).*", regex::escape(&self.path))
+        };
         if let Ok(re) = Regex::new(&s) {
             let res =
                 re.is_match(path) &&
@@ -107,5 +111,34 @@ mod test {
         assert!(!p.is_match("post".to_owned(), PathType::Rest, "/end-point1/foo"));
         assert!(!p.is_match("get".to_owned(), PathType::Rest, "/end-point2"));
         assert!(!p.is_match("get".to_owned(), PathType::Rest, "/end-point"));
+
+        let p = WebPath {
+            path: "/admin".to_owned(),
+            path_type: PathType::Rest,
+            method: "get".to_owned(),
+            auth_required: false,
+            return_code: 200,
+            return_text: "".to_owned(),
+            authorization: AuthorizationType::Jwt,
+            auth_config: AuthConfig::default(),
+            accounts: vec![],
+        };
+        assert!(p.is_match("get".to_owned(), PathType::Rest, "/admin"));
+        assert!(p.is_match("get".to_owned(), PathType::Rest, "/admin/users"));
+        assert!(!p.is_match("get".to_owned(), PathType::Rest, "/administrator"));
+
+        let p = WebPath {
+            path: "/debug/v1.0".to_owned(),
+            path_type: PathType::Rest,
+            method: "get".to_owned(),
+            auth_required: false,
+            return_code: 200,
+            return_text: "".to_owned(),
+            authorization: AuthorizationType::Jwt,
+            auth_config: AuthConfig::default(),
+            accounts: vec![],
+        };
+        assert!(p.is_match("get".to_owned(), PathType::Rest, "/debug/v1.0"));
+        assert!(!p.is_match("get".to_owned(), PathType::Rest, "/debug/v10"));
     }
 }

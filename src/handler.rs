@@ -166,6 +166,12 @@ mod tests {
         auth_required: true
         return_code: 700
         return_text: Wrong http code       
+      - path: /end-point4
+        path_type: rest
+        method: PATCH
+        auth_required: false
+        return_code: 202
+        return_text: Patched
         ";
 
         let web_paths: Vec<schema::WebPath> = serde_yaml::from_str(yaml).unwrap();
@@ -191,8 +197,7 @@ mod tests {
                 .app_data(web::Data::new(state))
                 .route("/auth-get", web::get().to(authenticate_get))
                 .route("/auth-post", web::post().to(authenticate_post))
-                .route("/{tail:.*}", web::get().to(handler))
-                .route("/{tail:.*}", web::post().to(handler))
+                .route("/{tail:.*}", web::route().to(handler))
         ).await;
 
         // path that doesn't exist
@@ -265,5 +270,11 @@ mod tests {
         let req = test::TestRequest::get().uri(&uri.clone()).to_request();
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status().as_u16(), 401);
+
+        // configured PATCH routes reach the generic handler
+        uri = "/end-point4".to_string();
+        let req = test::TestRequest::patch().uri(&uri.clone()).to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status().as_u16(), 202);
     }
 }
