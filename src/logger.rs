@@ -134,10 +134,12 @@ mod test {
 
         let sub = setup_logger("/tmp".to_string(), "honeyaml.log".to_string(), level).unwrap();
 
-        tracing::subscriber::set_global_default(sub).unwrap();
-
-        let l = Logger::new();
-        l.record(req, body.clone(), status_code);
+        // Scoped instead of global, test_run in main.rs may set the global
+        // subscriber first when the tests run in parallel
+        tracing::subscriber::with_default(sub, || {
+            let l = Logger::new();
+            l.record(req, body.clone(), status_code);
+        });
 
         if let Ok(paths) = glob("/tmp/honeyaml.log*") {
             for path in paths.flatten() {

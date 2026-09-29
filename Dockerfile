@@ -1,26 +1,32 @@
-FROM rust:latest AS builder
+# syntax=docker/dockerfile:1
 #
-RUN apt update && apt install -y git musl-tools musl-dev libzstd-dev
-RUN update-ca-certificates
+# The builder always runs on the build platform and cross-compiles a static
+# musl binary for the target, rustc under QEMU emulation crashes (SIGSEGV).
+FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.9.0 AS xx
+#
+FROM --platform=$BUILDPLATFORM rust:1.98.1-alpine3.23 AS builder
+COPY --from=xx / /
+ARG TARGETPLATFORM
+#
+# Install packages, native ones for the tests and target ones for the build
+RUN apk --no-cache -U add clang lld musl-dev && \
+    xx-apk --no-cache add musl-dev gcc
 #
 WORKDIR /opt/honeyaml
 COPY . .
 #
-# Need to dynamically link, otherwise multi platform builds are breaking with zstd-sys
-RUN cargo build --release && \
-    cp target/release/honeyaml /opt/honeyaml/
+# Test on the build platform, then cross-compile for the target
+RUN cargo test && \
+    xx-cargo build --release --target-dir ./build && \
+    cp ./build/$(xx-cargo --print-target-triple)/release/honeyaml /opt/honeyaml/honeyaml-bin && \
+    xx-verify --static /opt/honeyaml/honeyaml-bin
 #
-# Using wolfi instead of ubuntu because of smaller footprint (and required full glibc support)
-FROM chainguard/wolfi-base:latest
+FROM scratch
 #
-COPY --from=builder /opt/honeyaml/honeyaml /opt/honeyaml/
+COPY --from=builder /opt/honeyaml/honeyaml-bin /opt/honeyaml/honeyaml
 COPY --from=builder /opt/honeyaml/api.yml /opt/honeyaml/
 #
-RUN <<EOF
-apk update
-apk add libstdc++
-EOF
-#
 STOPSIGNAL SIGINT
+USER 2000:2000
 WORKDIR /opt/honeyaml
 CMD ["./honeyaml", "-d", "/opt/honeyaml/log"]

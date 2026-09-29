@@ -11,7 +11,9 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-actix-web = "4.2.1"
+# No response compression, it is not used and pulls in zstd-sys (C), pure Rust
+# keeps the build static and cross-compilable
+actix-web = { version = "4.2.1", default-features = false, features = ["macros"] }
 serde = "1.0.152"
 serde_yaml = "0.9.16"
 jwt-simple = "0.11.2"
